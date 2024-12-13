@@ -1,57 +1,67 @@
-name: Deploy Lambda Function
+name: Deploy AWS Lambda
 
 on:
   push:
     branches: [ main ]
 
 jobs:
-  deploy:
+  # Rodar testes
+  test:
     runs-on: ubuntu-latest
 
     steps:
-      # Faz o checkout do repositório
-      - uses: actions/checkout@v2
+      - name: Checkout Repository
+        uses: actions/checkout@v2
 
-      # Configurar o Python
       - name: Set up Python
         uses: actions/setup-python@v2
         with:
           python-version: '3.11'
 
-      # Instala dependências e executa os testes
-      - name: Install dependencies and run tests
+      - name: Install dependencies
         run: |
           python -m venv .venv
           source .venv/bin/activate
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-          export AWS_DEFAULT_REGION=us-east-2
-          python -m pytest --maxfail=5 --disable-warnings
 
-      # Instalar o zip para criar o pacote
-      - name: Install zip tool
-        uses: montudor/action-zip@v1
-
-      # Script para organizar a estrutura da Lambda e criar o ZIP
-      - name: Prepare Lambda Package
+      - name: Run Tests
         run: |
-          # Cria uma pasta temporária para o pacote
-          mkdir -p build
-          # Copia o arquivo lambda_handler para a pasta temporária
-          cp Lambda/registration-form.py build/registration-form.py
-          # Cria o pacote ZIP dentro da pasta temporária
-          cd build && zip -r ../code.zip . && cd ..
-          # Remove a pasta temporária após criar o pacote
-          rm -rf build
+          source .venv/bin/activate
+          pytest -v
 
-      # Atualizar o código da Lambda na AWS usando AWS CLI
-      - name: AWS CLI v2
-        uses: imehedi/actions-awscli-v2@latest
+  # Empacotar e fazer deploy
+  deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    env:
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      AWS_DEFAULT_REGION: "us-east-2"
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v2
+
+      - name: Set up Python
+        uses: actions/setup-python@v2
         with:
-          args: "lambda update-function-code \
-            --function-name ${{ secrets.AMI }} \
-            --zip-file fileb://code.zip"
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          AWS_DEFAULT_REGION: "us-east-2"
+          python-version: '3.11'
+
+      - name: Install Dependencies
+        run: |
+          python -m venv .venv
+          source .venv/bin/activate
+          pip install -r requirements.txt
+
+      - name: Package Lambda
+        run: |
+          mkdir -p build
+          cp Lambda/registration-form.py build/
+          cd build
+          zip -r ../lambda_payload.zip .
+          cd ..
+
+      - name: Deploy Lambda with AWS CLI
+        run: |
+          aws lambda update-function-code --function-name ${{ secrets.AMI }} --zip-file fileb://lambda_payload.zip
