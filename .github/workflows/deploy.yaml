@@ -9,11 +9,40 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      # Faz o checkout do repositório
       - uses: actions/checkout@v2
+
+      # Configurar o Python
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.11'
+
+      # Instala dependências e executa os testes
+      - name: Install dependencies and run tests
+        run: |
+          python -m venv .venv
+          source .venv/bin/activate
+          pip install -r requirements.txt
+          python -m pytest --maxfail=5 --disable-warnings
+
+      # Instalar o zip para criar o pacote
       - name: Install zip tool
         uses: montudor/action-zip@v1
-      - name: Create Zip file for Lambda function
-        run: zip -r code.zip .
+
+      # Script para organizar a estrutura da Lambda e criar o ZIP
+      - name: Prepare Lambda Package
+        run: |
+          # Cria uma pasta temporária para o pacote
+          mkdir -p build
+          # Copia o arquivo lambda_handler para a pasta temporária
+          cp Lambda/registration-form.py build/registration-form.py
+          # Cria o pacote ZIP dentro da pasta temporária
+          cd build && zip -r ../code.zip . && cd ..
+          # Remove a pasta temporária após criar o pacote
+          rm -rf build
+
+      # Atualizar o código da Lambda na AWS usando AWS CLI
       - name: AWS CLI v2
         uses: imehedi/actions-awscli-v2@latest
         with:
