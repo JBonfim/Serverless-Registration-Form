@@ -8,27 +8,31 @@ jobs:
   # Rodar testes
   test:
     runs-on: ubuntu-latest
+    env:  # Define AWS_DEFAULT_REGION como variável de ambiente
+      AWS_DEFAULT_REGION: "us-east-1"
 
     steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v2
+      - name: Checkout
+        uses: actions/checkout@v3
 
       - name: Set up Python
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v4
         with:
-          python-version: '3.11'
+          python-version: 3.x
 
       - name: Install dependencies
         run: |
-          python -m venv .venv
-          source .venv/bin/activate
-          python -m pip install --upgrade pip
+          python -m venv venv
+          source venv/bin/activate
           pip install -r requirements.txt
+
+      - name: Debug - Check Environment Variable
+        run: echo $AWS_DEFAULT_REGION
 
       - name: Run Tests
         run: |
-          source .venv/bin/activate
-          pytest -v
+          source venv/bin/activate
+          pytest
 
   # Empacotar e fazer deploy
   deploy:
