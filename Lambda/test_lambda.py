@@ -1,7 +1,7 @@
 import json
 import boto3
 from moto import mock_aws
-from registration_form import lambda_handler
+from lambda_function import lambda_handler
 
 
 # Configurações do teste usando Moto
