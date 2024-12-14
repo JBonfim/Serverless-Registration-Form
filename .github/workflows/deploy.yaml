@@ -40,34 +40,29 @@ jobs:
   deploy:
     needs: test
     runs-on: ubuntu-latest
-    env:
-      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-      AWS_DEFAULT_REGION: "us-east-2"
 
     steps:
-      - name: Checkout Repository
+      # 1️⃣ Checkout do Código
+      - name: Checkout Code
         uses: actions/checkout@v2
 
-      - name: Set up Python
-        uses: actions/setup-python@v2
-        with:
-          python-version: '3.11'
-
-      - name: Install Dependencies
-        run: |
-          python -m venv .venv
-          source .venv/bin/activate
-          pip install -r requirements.txt
-
-      - name: Package Lambda
+      # 2️⃣ Criar o Pacote Zip Apenas com o Arquivo Necessário
+      - name: Create Zip for Lambda
         run: |
           mkdir -p build
-          cp Lambda/registration-form.py build/
+          cp Lambda/registration_form.py build/
           cd build
-          zip -r ../lambda_payload.zip .
+          zip ../code.zip registration_form.py
           cd ..
 
-      - name: Deploy Lambda with AWS CLI
-        run: |
-          aws lambda update-function-code --function-name ${{ secrets.AMI }} --zip-file fileb://lambda_payload.zip
+      # 3️⃣ Deploy da Lambda
+      - name: Deploy to AWS Lambda
+        uses: imehedi/actions-awscli-v2@latest
+        with:
+          args: "lambda update-function-code \
+            --function-name ${{ secrets.AMI }} \
+            --zip-file fileb://code.zip"
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: "us-east-2"
