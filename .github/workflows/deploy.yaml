@@ -50,9 +50,9 @@ jobs:
       - name: Create Zip for Lambda
         run: |
           mkdir -p build
-          cp Lambda/registration_form.py build/
+          cp Lambda/lambda_function.py build/
           cd build
-          zip ../code.zip registration_form.py
+          zip ../code.zip lambda_function.py
           cd ..
 
       # 3️⃣ Deploy da Lambda
