@@ -49,74 +49,6 @@ O payload de entrada esperado é um JSON com os seguintes campos:
 }
 ```
 
-## Código da Lambda
-
-### Arquivo `lambda_function.py`
-
-```python
-import json
-import boto3
-import logging
-import os
-from botocore.exceptions import ClientError
-
-# Configuração de logging
-logger = logging.getLogger()
-logger.setLevel(logging.INFO)
-
-dynamodb = boto3.resource('dynamodb')
-
-def lambda_handler(event, context):
-    table_name = os.getenv("DYNAMODB_TABLE")
-    table = dynamodb.Table(table_name)
-
-    try:
-        # Log da requisição recebida
-        logger.info("Evento recebido: %s", json.dumps(event))
-
-        # Validar o payload de entrada
-        required_fields = ["email", "name", "phone", "password"]
-        for field in required_fields:
-            if field not in event:
-                raise ValueError(f"Campo obrigatório ausente: {field}")
-
-        # Inserir dados no DynamoDB
-        item = {
-            "email": event["email"],
-            "name": event["name"],
-            "phone": event["phone"],
-            "password": event["password"]  # Em um caso real, isso deve ser criptografado
-        }
-        table.put_item(Item=item)
-
-        # Resposta de sucesso
-        return {
-            "statusCode": 200,
-            "body": json.dumps({"message": "Dados armazenados com sucesso."})
-        }
-
-    except ClientError as e:
-        logger.error("Erro no DynamoDB: %s", e)
-        return {
-            "statusCode": 500,
-            "body": json.dumps({"error": "Erro ao acessar o DynamoDB."})
-        }
-
-    except ValueError as e:
-        logger.error("Erro de validação: %s", e)
-        return {
-            "statusCode": 400,
-            "body": json.dumps({"error": str(e)})
-        }
-
-    except Exception as e:
-        logger.error("Erro inesperado: %s", e)
-        return {
-            "statusCode": 500,
-            "body": json.dumps({"error": "Erro interno do servidor."})
-        }
-```
-
 ## Configuração do DynamoDB
 
 Crie uma tabela no DynamoDB com a seguinte configuração:
@@ -138,7 +70,7 @@ Crie uma tabela no DynamoDB com a seguinte configuração:
    pytest tests/
    ```
 
-## Deploy
+## Deploy Manual
 
 ### 1. Criar Pacote ZIP
 
@@ -177,6 +109,3 @@ Crie uma tabela no DynamoDB com a seguinte configuração:
 - Adicionar autenticação ao API Gateway.
 - Implementar validação mais robusta para os dados de entrada.
 
-
-# Arquitetura do projeto
-<img width="443" alt="image" src="https://github.com/user-attachments/assets/57409e52-adcc-4f4e-9d77-6f1bc87284c4" />
